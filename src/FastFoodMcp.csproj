@@ -12,8 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="data\*.json">
+    <None Include="../data/*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data/%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
 

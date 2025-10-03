@@ -9,6 +9,7 @@ namespace FastFoodMcp.Tools;
 /// <summary>
 /// MCP tools for feature flag management.
 /// </summary>
+[McpServerToolType]
 public class FlagTools
 {
     private readonly JsonStore<FlagsData> _flagStore;
@@ -23,17 +24,18 @@ public class FlagTools
     /// <summary>
     /// Lists all feature flags, optionally filtered by service.
     /// </summary>
-    [McpServerTool, Description("List feature flags, optionally scoped to a service")]
-    public List<FlagListItem> ListFlags(ListFlagsRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("List feature flags, optionally scoped to a service")]
+    public List<FlagListItem> ListFlags(
+        [Description("Optional service name to filter flags by")] string? service = null)
     {
-        _logger.LogInformation("ListFlags called, service filter: {Service}", request.Service);
+        _logger.LogInformation("ListFlags called, service filter: {Service}", service);
 
         var flags = _flagStore.Data.Flags;
 
-        if (!string.IsNullOrWhiteSpace(request.Service))
+        if (!string.IsNullOrWhiteSpace(service))
         {
             flags = flags
-                .Where(f => string.Equals(f.Service, request.Service, StringComparison.OrdinalIgnoreCase))
+                .Where(f => string.Equals(f.Service, service, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
@@ -51,20 +53,21 @@ public class FlagTools
     /// <summary>
     /// Gets full details of a specific feature flag.
     /// </summary>
-    [McpServerTool, Description("Get full flag definition")]
-    public GetFlagResponse GetFlag(GetFlagRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Get full flag definition")]
+    public GetFlagResponse GetFlag(
+        [Description("The unique key/identifier of the feature flag")] string key)
     {
-        _logger.LogInformation("GetFlag called for: {Key}", request.Key);
+        _logger.LogInformation("GetFlag called for: {Key}", key);
 
         var flags = _flagStore.Data.Flags;
         var flag = flags.FirstOrDefault(f =>
-            string.Equals(f.Key, request.Key, StringComparison.OrdinalIgnoreCase));
+            string.Equals(f.Key, key, StringComparison.OrdinalIgnoreCase));
 
         if (flag == null)
         {
             // Provide suggestions
             var suggestions = FuzzyMatcher.FindTopMatches(
-                request.Key,
+                key,
                 flags,
                 f => f.Key,
                 topN: 3
@@ -74,7 +77,7 @@ public class FlagTools
                 ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item.Key))}?"
                 : "";
 
-            throw new McpException($"Feature flag '{request.Key}' not found.{suggestionText}"
+            throw new McpException($"Feature flag '{key}' not found.{suggestionText}"
             , McpErrorCode.InvalidRequest);
         }
 
@@ -94,21 +97,23 @@ public class FlagTools
     /// <summary>
     /// Resolves the value of a feature flag in a specific environment.
     /// </summary>
-    [McpServerTool, Description("Resolve a flag's value in an environment")]
-    public FlagStatusResponse FlagStatus(FlagStatusRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Resolve a flag's value in an environment")]
+    public FlagStatusResponse FlagStatus(
+        [Description("The unique key/identifier of the feature flag")] string key,
+        [Description("The environment name (e.g., 'dev', 'staging', 'prod')")] string environment)
     {
         _logger.LogInformation("FlagStatus called for: {Key} in {Environment}", 
-            request.Key, request.Environment);
+            key, environment);
 
         var flags = _flagStore.Data.Flags;
         var flag = flags.FirstOrDefault(f =>
-            string.Equals(f.Key, request.Key, StringComparison.OrdinalIgnoreCase));
+            string.Equals(f.Key, key, StringComparison.OrdinalIgnoreCase));
 
         if (flag == null)
         {
             // Provide suggestions
             var suggestions = FuzzyMatcher.FindTopMatches(
-                request.Key,
+                key,
                 flags,
                 f => f.Key,
                 topN: 3
@@ -118,12 +123,12 @@ public class FlagTools
                 ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item.Key))}?"
                 : "";
 
-            throw new McpException($"Feature flag '{request.Key}' not found.{suggestionText}"
+            throw new McpException($"Feature flag '{key}' not found.{suggestionText}"
             , McpErrorCode.InvalidRequest);
         }
 
         // Normalize environment name
-        var envKey = request.Environment.ToLowerInvariant();
+        var envKey = environment.ToLowerInvariant();
         
         // Try to get environment-specific value
         object? value = null;
@@ -135,7 +140,7 @@ public class FlagTools
         {
             // Try case-insensitive match
             var envEntry = flag.Environments.FirstOrDefault(kvp =>
-                string.Equals(kvp.Key, request.Environment, StringComparison.OrdinalIgnoreCase));
+                string.Equals(kvp.Key, environment, StringComparison.OrdinalIgnoreCase));
 
             if (envEntry.Key != null)
             {
@@ -146,14 +151,14 @@ public class FlagTools
                 // Environment not found, use default
                 value = flag.Default;
                 _logger.LogWarning("Environment '{Environment}' not found for flag '{Key}', using default value",
-                    request.Environment, request.Key);
+                    environment, key);
             }
         }
 
         return new FlagStatusResponse
         {
             Key = flag.Key,
-            Environment = request.Environment,
+            Environment = environment,
             Value = value
         };
     }

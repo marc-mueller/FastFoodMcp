@@ -630,7 +630,16 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
     {
         var json = JsonSerializer.Serialize(request);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-        return await _client.PostAsync("/mcp", content);
+        
+        // MCP HTTP transport requires both Accept headers
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = content
+        };
+        requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/event-stream"));
+        
+        return await _client.SendAsync(requestMessage);
     }
 
     #endregion

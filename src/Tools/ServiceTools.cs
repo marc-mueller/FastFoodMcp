@@ -9,6 +9,7 @@ namespace FastFoodMcp.Tools;
 /// <summary>
 /// MCP tools for service dependency awareness.
 /// </summary>
+[McpServerToolType]
 public class ServiceTools
 {
     private readonly JsonStore<SystemData> _systemStore;
@@ -23,13 +24,14 @@ public class ServiceTools
     /// <summary>
     /// Gets detailed information about a service.
     /// </summary>
-    [McpServerTool, Description("Fetch a service's metadata")]
-    public GetServiceResponse GetService(GetServiceRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Fetch a service's metadata")]
+    public GetServiceResponse GetService(
+        [Description("The name of the service to retrieve information for")] string name)
     {
-        _logger.LogInformation("GetService called for: {Name}", request.Name);
+        _logger.LogInformation("GetService called for: {Name}", name);
 
         var services = _systemStore.Data.Services;
-        var serviceName = request.Name.ToLowerInvariant();
+        var serviceName = name.ToLowerInvariant();
 
         // Try exact match
         if (services.TryGetValue(serviceName, out var service))
@@ -39,7 +41,7 @@ public class ServiceTools
 
         // Try case-insensitive
         var entry = services.FirstOrDefault(kvp =>
-            string.Equals(kvp.Key, request.Name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase));
 
         if (entry.Value != null)
         {
@@ -48,7 +50,7 @@ public class ServiceTools
 
         // Not found - provide suggestions
         var suggestions = FuzzyMatcher.FindTopMatches(
-            request.Name,
+            name,
             services.Keys,
             k => k,
             topN: 3
@@ -58,32 +60,34 @@ public class ServiceTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Service '{request.Name}' not found.{suggestionText}"
+        throw new McpException($"Service '{name}' not found.{suggestionText}"
         , McpErrorCode.InvalidRequest);
     }
 
     /// <summary>
     /// Lists service dependencies (inbound or outbound).
     /// </summary>
-    [McpServerTool, Description("List a service's inbound/outbound dependencies")]
-    public List<DependencyItem> ListDependencies(ListDependenciesRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("List a service's inbound/outbound dependencies")]
+    public List<DependencyItem> ListDependencies(
+        [Description("The name of the service")] string name,
+        [Description("Direction: 'inbound' (services that depend on this) or 'outbound' (services this depends on)")] string direction = "outbound")
     {
         _logger.LogInformation("ListDependencies called for: {Name}, direction: {Direction}", 
-            request.Name, request.Direction);
+            name, direction);
 
         var services = _systemStore.Data.Services;
-        var serviceName = request.Name.ToLowerInvariant();
+        var serviceName = name.ToLowerInvariant();
 
         // Verify service exists
         if (!services.ContainsKey(serviceName))
         {
             var entry = services.FirstOrDefault(kvp =>
-                string.Equals(kvp.Key, request.Name, StringComparison.OrdinalIgnoreCase));
+                string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase));
             
             if (entry.Value == null)
             {
                 var suggestions = FuzzyMatcher.FindTopMatches(
-                    request.Name,
+                    name,
                     services.Keys,
                     k => k,
                     topN: 3
@@ -93,34 +97,32 @@ public class ServiceTools
                     ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
                     : "";
 
-                throw new McpException($"Service '{request.Name}' not found.{suggestionText}"
+                throw new McpException($"Service '{name}' not found.{suggestionText}"
                 , McpErrorCode.InvalidRequest);
             }
             serviceName = entry.Key;
         }
 
-        if (request.Direction.Equals("outbound", StringComparison.OrdinalIgnoreCase))
+        if (direction.Equals("outbound", StringComparison.OrdinalIgnoreCase))
         {
             // Return services this service depends on
-            var deps = services[serviceName].DependsOn
-                .Select(name => new DependencyItem { Name = name })
+            return services[serviceName].DependsOn
+                .Select(depName => new DependencyItem { Name = depName })
                 .OrderBy(d => d.Name)
                 .ToList();
-            return deps;
         }
-        else if (request.Direction.Equals("inbound", StringComparison.OrdinalIgnoreCase))
+        else if (direction.Equals("inbound", StringComparison.OrdinalIgnoreCase))
         {
             // Return services that depend on this service
-            var deps = services
+            return services
                 .Where(kvp => kvp.Value.DependsOn.Contains(serviceName, StringComparer.OrdinalIgnoreCase))
                 .Select(kvp => new DependencyItem { Name = kvp.Key })
                 .OrderBy(d => d.Name)
                 .ToList();
-            return deps;
         }
         else
         {
-            throw new McpException($"Invalid direction '{request.Direction}'. Must be 'inbound' or 'outbound'."
+            throw new McpException($"Invalid direction '{direction}'. Must be 'inbound' or 'outbound'."
             , McpErrorCode.InvalidParams);
         }
     }
@@ -128,25 +130,27 @@ public class ServiceTools
     /// <summary>
     /// Finds API endpoints for a service.
     /// </summary>
-    [McpServerTool, Description("List API endpoints for a service")]
-    public List<EndpointResult> FindEndpoint(FindEndpointRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("List API endpoints for a service")]
+    public List<EndpointResult> FindEndpoint(
+        [Description("The name of the service")] string name,
+        [Description("Optional path filter to search for (partial match)")] string? path = null)
     {
         _logger.LogInformation("FindEndpoint called for: {Name}, path: {Path}", 
-            request.Name, request.Path);
+            name, path);
 
         var services = _systemStore.Data.Services;
-        var serviceName = request.Name.ToLowerInvariant();
+        var serviceName = name.ToLowerInvariant();
 
         // Find service
         if (!services.TryGetValue(serviceName, out var service))
         {
             var entry = services.FirstOrDefault(kvp =>
-                string.Equals(kvp.Key, request.Name, StringComparison.OrdinalIgnoreCase));
+                string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase));
 
             if (entry.Value == null)
             {
                 var suggestions = FuzzyMatcher.FindTopMatches(
-                    request.Name,
+                    name,
                     services.Keys,
                     k => k,
                     topN: 3
@@ -156,7 +160,7 @@ public class ServiceTools
                     ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
                     : "";
 
-                throw new McpException($"Service '{request.Name}' not found.{suggestionText}"
+                throw new McpException($"Service '{name}' not found.{suggestionText}"
                 , McpErrorCode.InvalidRequest);
             }
             service = entry.Value;
@@ -165,10 +169,10 @@ public class ServiceTools
         var endpoints = service.Api;
 
         // Filter by path if provided
-        if (!string.IsNullOrWhiteSpace(request.Path))
+        if (!string.IsNullOrWhiteSpace(path))
         {
             endpoints = endpoints
-                .Where(e => e.Path.Contains(request.Path, StringComparison.OrdinalIgnoreCase))
+                .Where(e => e.Path.Contains(path, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
@@ -188,24 +192,25 @@ public class ServiceTools
     /// <summary>
     /// Gets owner/team information for a service.
     /// </summary>
-    [McpServerTool, Description("Get owning team and contact info for a service")]
-    public ServiceOwnerResponse ServiceOwner(ServiceOwnerRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Get owning team and contact info for a service")]
+    public ServiceOwnerResponse ServiceOwner(
+        [Description("The name of the service")] string name)
     {
-        _logger.LogInformation("ServiceOwner called for: {Name}", request.Name);
+        _logger.LogInformation("ServiceOwner called for: {Name}", name);
 
         var data = _systemStore.Data;
-        var serviceName = request.Name.ToLowerInvariant();
+        var serviceName = name.ToLowerInvariant();
 
         // Find service
         if (!data.Services.TryGetValue(serviceName, out var service))
         {
             var entry = data.Services.FirstOrDefault(kvp =>
-                string.Equals(kvp.Key, request.Name, StringComparison.OrdinalIgnoreCase));
+                string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase));
 
             if (entry.Value == null)
             {
                 var suggestions = FuzzyMatcher.FindTopMatches(
-                    request.Name,
+                    name,
                     data.Services.Keys,
                     k => k,
                     topN: 3
@@ -215,7 +220,7 @@ public class ServiceTools
                     ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
                     : "";
 
-                throw new McpException($"Service '{request.Name}' not found.{suggestionText}"
+                throw new McpException($"Service '{name}' not found.{suggestionText}"
                 , McpErrorCode.InvalidRequest);
             }
             service = entry.Value;
@@ -224,7 +229,7 @@ public class ServiceTools
         // Get first owner
         if (service.Owners.Count == 0)
         {
-            throw new McpException($"Service '{request.Name}' has no owners defined."
+            throw new McpException($"Service '{name}' has no owners defined."
             , McpErrorCode.InvalidRequest);
         }
 
@@ -239,22 +244,24 @@ public class ServiceTools
                 Runbook = ownerInfo.Runbook
             };
         }
-
-        // Owner info not found, return basic info
-        return new ServiceOwnerResponse
+        else
         {
-            Team = ownerKey,
-            Slack = null,
-            Pager = null,
-            Runbook = null
-        };
+            // Owner info not found, return basic info
+            return new ServiceOwnerResponse
+            {
+                Team = ownerKey,
+                Slack = null,
+                Pager = null,
+                Runbook = null
+            };
+        }
     }
 
-    private static GetServiceResponse MapToResponse(string name, ServiceEntry service)
+    private static GetServiceResponse MapToResponse(string serviceName, ServiceEntry service)
     {
         return new GetServiceResponse
         {
-            Name = name,
+            Name = serviceName,
             Description = service.Description,
             Owners = service.Owners,
             Repo = service.Repo,

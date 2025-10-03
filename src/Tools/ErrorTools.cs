@@ -9,6 +9,7 @@ namespace FastFoodMcp.Tools;
 /// <summary>
 /// MCP tool to explain an internal error code.
 /// </summary>
+[McpServerToolType]
 public class ErrorTools
 {
     private readonly JsonStore<Dictionary<string, ErrorEntry>> _errorStore;
@@ -23,50 +24,51 @@ public class ErrorTools
     /// <summary>
     /// Explains an internal error code with causes, fix steps, and references.
     /// </summary>
-    [McpServerTool, Description("Explain an internal error code and suggest steps")]
-    public ExplainErrorResponse ExplainError(ExplainErrorRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Explain an internal error code and suggest steps")]
+    public ExplainErrorResponse ExplainError(
+        [Description("The error code to explain (e.g., 'ERR001')")] string code)
     {
-        _logger.LogInformation("ExplainError called for code: {Code}", request.Code);
+        _logger.LogInformation("ExplainError called for code: {Code}", code);
 
         var errors = _errorStore.Data;
-        var codeUpper = request.Code.ToUpperInvariant();
+        var codeUpper = code.ToUpperInvariant();
 
-        // Try exact match first
-        if (errors.TryGetValue(codeUpper, out var errorEntry))
+        // Try exact match
+        if (errors.TryGetValue(codeUpper, out var entry))
         {
             return new ExplainErrorResponse
             {
                 Code = codeUpper,
-                Title = errorEntry.Title,
-                Severity = errorEntry.Severity,
-                Services = errorEntry.Services,
-                LikelyCauses = errorEntry.Causes,
-                RecommendedSteps = errorEntry.Fix,
-                References = errorEntry.Links
+                Title = entry.Title,
+                Services = entry.Services,
+                Severity = entry.Severity,
+                LikelyCauses = entry.Causes,
+                RecommendedSteps = entry.Fix,
+                References = entry.Links
             };
         }
 
         // Try case-insensitive match
-        var entry = errors.FirstOrDefault(kvp => 
-            string.Equals(kvp.Key, request.Code, StringComparison.OrdinalIgnoreCase));
-        
-        if (entry.Value != null)
+        var entryMatch = errors.FirstOrDefault(kvp => 
+            string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase));
+
+        if (entryMatch.Value != null)
         {
             return new ExplainErrorResponse
             {
-                Code = entry.Key,
-                Title = entry.Value.Title,
-                Severity = entry.Value.Severity,
-                Services = entry.Value.Services,
-                LikelyCauses = entry.Value.Causes,
-                RecommendedSteps = entry.Value.Fix,
-                References = entry.Value.Links
+                Code = entryMatch.Key,
+                Title = entryMatch.Value.Title,
+                Services = entryMatch.Value.Services,
+                Severity = entryMatch.Value.Severity,
+                LikelyCauses = entryMatch.Value.Causes,
+                RecommendedSteps = entryMatch.Value.Fix,
+                References = entryMatch.Value.Links
             };
         }
 
         // Not found - provide suggestions
         var suggestions = FuzzyMatcher.FindTopMatches(
-            request.Code,
+            code,
             errors.Keys,
             k => k,
             topN: 3
@@ -76,21 +78,23 @@ public class ErrorTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Error code '{request.Code}' not found.{suggestionText}"
+        throw new McpException($"Error code '{code}' not found.{suggestionText}"
         , McpErrorCode.InvalidRequest);
     }
 
     /// <summary>
     /// Searches the error catalog by keyword or message pattern.
     /// </summary>
-    [McpServerTool, Description("Search error catalog by keyword")]
-    public List<ErrorSearchResult> SearchErrors(SearchErrorsRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Search error catalog by keyword")]
+    public List<ErrorSearchResult> SearchErrors(
+        [Description("Keyword or text to search for in error codes, titles, and messages")] string query,
+        [Description("Maximum number of results to return (default: 10, max: 50)")] int limit = 10)
     {
-        _logger.LogInformation("SearchErrors called with query: {Query}", request.Query);
+        _logger.LogInformation("SearchErrors called with query: {Query}", query);
 
         var errors = _errorStore.Data;
-        var query = request.Query.ToLowerInvariant();
-        var limit = Math.Min(request.Limit, 50); // Cap at 50
+        var queryLower = query.ToLowerInvariant();
+        var limitCapped = Math.Min(limit, 50); // Cap at 50
 
         var results = errors
             .Where(kvp =>
@@ -99,12 +103,12 @@ public class ErrorTools
                 var entry = kvp.Value;
                 
                 // Search in code, title, message patterns
-                return code.Contains(query) ||
+                return code.Contains(queryLower) ||
                        entry.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                        entry.MessagePatterns.Any(p => p.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                        FuzzyMatcher.FuzzyContains(entry.Title, query, 0.5);
             })
-            .Take(limit)
+            .Take(limitCapped)
             .Select(kvp => new ErrorSearchResult
             {
                 Code = kvp.Key,
@@ -121,32 +125,33 @@ public class ErrorTools
     /// <summary>
     /// Returns curated fix steps for an error code.
     /// </summary>
-    [McpServerTool, Description("Get fix steps for an error code")]
-    public List<FixStep> SuggestFix(SuggestFixRequest request)
+    [McpServerTool(UseStructuredContent = true), Description("Get fix steps for an error code")]
+    public List<string> SuggestFix(
+        [Description("The error code to get fix steps for")] string code)
     {
-        _logger.LogInformation("SuggestFix called for code: {Code}", request.Code);
+        _logger.LogInformation("SuggestFix called for code: {Code}", code);
 
         var errors = _errorStore.Data;
-        var codeUpper = request.Code.ToUpperInvariant();
+        var codeUpper = code.ToUpperInvariant();
 
         // Try exact match
-        if (errors.TryGetValue(codeUpper, out var errorEntry))
+        if (errors.TryGetValue(codeUpper, out var entry))
         {
-            return errorEntry.Fix.Select(step => new FixStep { Step = step }).ToList();
+            return entry.Fix;
         }
 
         // Try case-insensitive
-        var entry = errors.FirstOrDefault(kvp =>
-            string.Equals(kvp.Key, request.Code, StringComparison.OrdinalIgnoreCase));
+        var entryMatch = errors.FirstOrDefault(kvp =>
+            string.Equals(kvp.Key, code, StringComparison.OrdinalIgnoreCase));
 
-        if (entry.Value != null)
+        if (entryMatch.Value != null)
         {
-            return entry.Value.Fix.Select(step => new FixStep { Step = step }).ToList();
+            return entryMatch.Value.Fix;
         }
 
         // Not found
         var suggestions = FuzzyMatcher.FindTopMatches(
-            request.Code,
+            code,
             errors.Keys,
             k => k,
             topN: 3
@@ -156,7 +161,7 @@ public class ErrorTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Error code '{request.Code}' not found.{suggestionText}"
+        throw new McpException($"Error code '{code}' not found.{suggestionText}"
         , McpErrorCode.InvalidRequest);
     }
 }
