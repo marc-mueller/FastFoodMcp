@@ -57,8 +57,8 @@ var app = builder.Build();
 // Configure HTTP request pipeline
 app.UseHttpsRedirection();
 
-// Map MCP endpoints
-app.MapMcp();
+// Map MCP endpoints with explicit route
+app.MapMcp("/mcp");
 
 // Add a health check endpoint
 app.MapGet("/health", () => Results.Ok(new 
