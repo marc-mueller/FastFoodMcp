@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FastFoodMcp.csproj" />
+    <ProjectReference Include="..\..\src\FastFoodMcp\FastFoodMcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

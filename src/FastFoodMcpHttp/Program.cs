@@ -1,6 +1,8 @@
+using FastFoodMcp.Extensions;
 using FastFoodMcp.Infra;
 using FastFoodMcp.Models;
 using FastFoodMcp.Tools;
+using FastFoodMcpBase.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,30 +11,8 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// Get data file paths
-var dataPath = Path.Combine(AppContext.BaseDirectory, "data");
-var errorsPath = Path.Combine(dataPath, "errors.json");
-var systemPath = Path.Combine(dataPath, "system.json");
-var flagsPath = Path.Combine(dataPath, "flags.json");
-
-// Register JSON stores as singletons with hot-reload capability
-builder.Services.AddSingleton(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<JsonStore<Dictionary<string, ErrorEntry>>>>();
-    return new JsonStore<Dictionary<string, ErrorEntry>>(errorsPath, logger);
-});
-
-builder.Services.AddSingleton(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<JsonStore<SystemData>>>();
-    return new JsonStore<SystemData>(systemPath, logger);
-});
-
-builder.Services.AddSingleton(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<JsonStore<FlagsData>>>();
-    return new JsonStore<FlagsData>(flagsPath, logger);
-});
+// Add Json Stores as data sources for the MCP tools.
+builder.Services.AddJsonStores();
 
 // Configure MCP Server with HTTP transport
 builder.Services.AddMcpServer(options =>

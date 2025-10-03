@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using FastFoodMcp.Infra;
-using FastFoodMcp.Models;
+using FastFoodMcpBase.Models;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 

@@ -1,5 +1,5 @@
-using FluentAssertions;
 using FastFoodMcp.Infra;
+using FluentAssertions;
 
 namespace FastFoodMcp.UnitTests.Infra;
 

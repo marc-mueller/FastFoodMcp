@@ -12,10 +12,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../data/*.json">
+    <None Include="../../data/*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>data/%(Filename)%(Extension)</Link>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastFoodMcp\FastFoodMcp.csproj" />
   </ItemGroup>
 
 </Project>

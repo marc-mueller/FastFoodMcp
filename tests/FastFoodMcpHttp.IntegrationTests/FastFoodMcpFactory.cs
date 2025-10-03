@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Hosting;
 
-namespace FastFoodMcp.IntegrationTests;
+namespace FastFoodMcpHttp.IntegrationTests;
 
 public class FastFoodMcpFactory : WebApplicationFactory<Program>
 {

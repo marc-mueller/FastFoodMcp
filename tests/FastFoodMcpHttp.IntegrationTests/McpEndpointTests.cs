@@ -1,10 +1,9 @@
-using FluentAssertions;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 
-namespace FastFoodMcp.IntegrationTests;
+namespace FastFoodMcpHttp.IntegrationTests;
 
 public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
 {

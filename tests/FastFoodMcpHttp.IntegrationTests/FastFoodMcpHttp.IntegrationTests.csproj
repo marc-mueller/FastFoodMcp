@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <RootNamespace>FastFoodMcpHttp.IntegrationTests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FastFoodMcp.csproj" />
+    <ProjectReference Include="..\..\src\FastFoodMcpHttp\FastFoodMcpHttp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

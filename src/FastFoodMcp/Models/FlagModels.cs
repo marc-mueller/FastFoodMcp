@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace FastFoodMcp.Models;
+namespace FastFoodMcpBase.Models;
 
 /// <summary>
 /// Root container for feature flags data.

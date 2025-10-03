@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>FastFoodMcp</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <None Include="..\data\errors.json">
+        <Link>data\errors.json</Link>
+      </None>
+      <None Include="..\data\flags.json">
+        <Link>data\flags.json</Link>
+      </None>
+      <None Include="..\data\system.json">
+        <Link>data\system.json</Link>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
+    </ItemGroup>
+
+</Project>
