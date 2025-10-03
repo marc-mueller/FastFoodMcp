@@ -60,8 +60,16 @@ public class ServiceTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Service '{name}' not found.{suggestionText}"
-        , McpErrorCode.InvalidRequest);
+        return new GetServiceResponse
+        {
+            Name = name,
+            Description = $"Service '{name}' not found.{suggestionText}",
+            Owners = new List<string>(),
+            Repo = null,
+            Language = null,
+            DependsOn = new List<string>(),
+            Api = new List<ApiEndpoint>()
+        };
     }
 
     /// <summary>
@@ -86,19 +94,8 @@ public class ServiceTools
             
             if (entry.Value == null)
             {
-                var suggestions = FuzzyMatcher.FindTopMatches(
-                    name,
-                    services.Keys,
-                    k => k,
-                    topN: 3
-                );
-
-                var suggestionText = suggestions.Any()
-                    ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
-                    : "";
-
-                throw new McpException($"Service '{name}' not found.{suggestionText}"
-                , McpErrorCode.InvalidRequest);
+                _logger.LogWarning("Service not found: {Name}", name);
+                return new List<DependencyItem>();
             }
             serviceName = entry.Key;
         }
@@ -149,19 +146,8 @@ public class ServiceTools
 
             if (entry.Value == null)
             {
-                var suggestions = FuzzyMatcher.FindTopMatches(
-                    name,
-                    services.Keys,
-                    k => k,
-                    topN: 3
-                );
-
-                var suggestionText = suggestions.Any()
-                    ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
-                    : "";
-
-                throw new McpException($"Service '{name}' not found.{suggestionText}"
-                , McpErrorCode.InvalidRequest);
+                _logger.LogWarning("Service not found: {Name}", name);
+                return new List<EndpointResult>();
             }
             service = entry.Value;
         }
@@ -209,19 +195,14 @@ public class ServiceTools
 
             if (entry.Value == null)
             {
-                var suggestions = FuzzyMatcher.FindTopMatches(
-                    name,
-                    data.Services.Keys,
-                    k => k,
-                    topN: 3
-                );
-
-                var suggestionText = suggestions.Any()
-                    ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
-                    : "";
-
-                throw new McpException($"Service '{name}' not found.{suggestionText}"
-                , McpErrorCode.InvalidRequest);
+                _logger.LogWarning("Service not found: {Name}", name);
+                return new ServiceOwnerResponse
+                {
+                    Team = $"Service '{name}' not found.",
+                    Slack = null,
+                    Pager = null,
+                    Runbook = null
+                };
             }
             service = entry.Value;
         }
@@ -229,8 +210,14 @@ public class ServiceTools
         // Get first owner
         if (service.Owners.Count == 0)
         {
-            throw new McpException($"Service '{name}' has no owners defined."
-            , McpErrorCode.InvalidRequest);
+            _logger.LogWarning("Service {Name} has no owners", name);
+            return new ServiceOwnerResponse
+            {
+                Team = $"Service '{name}' has no owners defined.",
+                Slack = null,
+                Pager = null,
+                Runbook = null
+            };
         }
 
         var ownerKey = service.Owners[0];

@@ -78,8 +78,18 @@ public class ErrorTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Error code '{code}' not found.{suggestionText}"
-        , McpErrorCode.InvalidRequest);
+        return new ExplainErrorResponse
+        {
+            Code = code,
+            Title = $"Error code '{code}' not found.{suggestionText}",
+            Services = new List<string>(),
+            Severity = "unknown",
+            LikelyCauses = new List<string> { "The error code does not exist in the catalog." },
+            RecommendedSteps = suggestions.Any() 
+                ? new List<string> { $"Try one of these codes: {string.Join(", ", suggestions.Select(s => s.Item))}" }
+                : new List<string> { "Check the error code spelling or search the catalog." },
+            References = new List<ErrorLink>()
+        };
     }
 
     /// <summary>
@@ -161,7 +171,9 @@ public class ErrorTools
             ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item))}?"
             : "";
 
-        throw new McpException($"Error code '{code}' not found.{suggestionText}"
-        , McpErrorCode.InvalidRequest);
+        return new List<string> 
+        { 
+            $"Error code '{code}' not found.{suggestionText}"
+        };
     }
 }

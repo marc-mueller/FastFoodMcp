@@ -77,8 +77,18 @@ public class FlagTools
                 ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item.Key))}?"
                 : "";
 
-            throw new McpException($"Feature flag '{key}' not found.{suggestionText}"
-            , McpErrorCode.InvalidRequest);
+            _logger.LogWarning("Flag not found: {Key}", key);
+            return new GetFlagResponse
+            {
+                Key = key,
+                Service = null,
+                Type = "boolean",
+                Default = false,
+                Variants = null,
+                Owners = new List<string>(),
+                Description = $"Feature flag '{key}' not found.{suggestionText}",
+                Environments = new Dictionary<string, object>()
+            };
         }
 
         return new GetFlagResponse
@@ -123,8 +133,13 @@ public class FlagTools
                 ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Item.Key))}?"
                 : "";
 
-            throw new McpException($"Feature flag '{key}' not found.{suggestionText}"
-            , McpErrorCode.InvalidRequest);
+            _logger.LogWarning("Flag not found: {Key}", key);
+            return new FlagStatusResponse
+            {
+                Key = key,
+                Environment = environment,
+                Value = $"Feature flag '{key}' not found.{suggestionText}"
+            };
         }
 
         // Normalize environment name
