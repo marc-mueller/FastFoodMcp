@@ -1,0 +1,30 @@
+{
+  "E2145": {
+    "title": "JWT token expired",
+    "services": ["gateway", "usersvc"],
+    "severity": "medium",
+    "messagePatterns": ["ExpiredJwtException", "token exp"],
+    "causes": ["Client clock skew", "Short token TTL"],
+    "fix": [
+      "Check client NTP sync",
+      "Increase auth leeway to 90s",
+      "Rotate signing key if older than 90 days"
+    ],
+    "links": [
+      { "label": "Auth Runbook", "url": "https://docs/runbooks/auth#jwt-expired" }
+    ]
+  },
+  "P5001": {
+    "title": "Payments: gateway timeout",
+    "services": ["paymentsvc"],
+    "severity": "high",
+    "messagePatterns": ["GatewayTimeout", "HTTP 504"],
+    "causes": ["Upstream latency", "Circuit breaker open"],
+    "fix": [
+      "Check upstream health dashboard",
+      "Temporarily raise timeout to 5s",
+      "Verify circuit breaker thresholds"
+    ],
+    "links": []
+  }
+}

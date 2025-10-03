@@ -1,0 +1,55 @@
+{
+  "services": {
+    "usersvc": {
+      "description": "User profiles and auth glue",
+      "owners": ["@identity-team"],
+      "repo": "github.com/acme/usersvc",
+      "language": "csharp",
+      "dependsOn": ["db.users", "emailsvc"],
+      "api": [
+        { "method": "GET", "path": "/users/{id}", "auth": "JWT" },
+        { "method": "POST", "path": "/users", "auth": "JWT" }
+      ]
+    },
+    "emailsvc": {
+      "description": "Email notification service",
+      "owners": ["@platform-comm"],
+      "dependsOn": [],
+      "api": []
+    },
+    "checkout": {
+      "description": "Checkout and cart management",
+      "owners": ["@web-checkout"],
+      "dependsOn": ["paymentsvc", "usersvc"],
+      "api": []
+    },
+    "paymentsvc": {
+      "description": "Payment processing service",
+      "owners": ["@payments-core"],
+      "dependsOn": ["vault", "ledger"],
+      "api": []
+    }
+  },
+  "owners": {
+    "@payments-core": { 
+      "team": "@payments-core", 
+      "slack": "#payments", 
+      "runbook": "https://docs/runbooks/payments" 
+    },
+    "@identity-team": { 
+      "team": "@identity-team", 
+      "slack": "#identity",
+      "runbook": "" 
+    },
+    "@web-checkout": { 
+      "team": "@web-checkout", 
+      "slack": "#checkout",
+      "runbook": "" 
+    },
+    "@platform-comm": { 
+      "team": "@platform-comm", 
+      "slack": "#platform",
+      "runbook": "" 
+    }
+  }
+}

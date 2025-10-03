@@ -1,0 +1,31 @@
+{
+  "flags": [
+    {
+      "key": "checkout.newAddressForm",
+      "service": "webapp",
+      "type": "boolean",
+      "default": false,
+      "environments": { 
+        "dev": true, 
+        "staging": true, 
+        "prod": false 
+      },
+      "owners": ["@web-checkout"],
+      "description": "New React form for address entry"
+    },
+    {
+      "key": "pricing.experimentA",
+      "service": "pricing",
+      "type": "multivariate",
+      "variants": ["control", "v1", "v2"],
+      "default": "control",
+      "environments": { 
+        "dev": "control",
+        "staging": "v1",
+        "prod": "control" 
+      },
+      "owners": ["@pricing-team"],
+      "description": "Pricing experiment with multiple variants"
+    }
+  ]
+}
