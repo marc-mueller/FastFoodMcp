@@ -11,12 +11,12 @@
       <ProjectReference Include="..\FastFoodMcp\FastFoodMcp.csproj" />
     </ItemGroup>
 
-    <PropertyGroup>
-        <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
-        <ContainerRepository>fastfoodmcp</ContainerRepository>
-        <ContainerFamily>alpine</ContainerFamily>
-        <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
-    </PropertyGroup>
+<PropertyGroup>
+    <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
+    <ContainerRepository>fastfoodmcp</ContainerRepository>
+    <ContainerFamily>alpine</ContainerFamily>
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
+</PropertyGroup>
     
     <ItemGroup>
       <Reference Include="Microsoft.Extensions.Hosting">

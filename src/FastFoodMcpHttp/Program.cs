@@ -23,11 +23,7 @@ builder.Services.AddMcpServer(options =>
         Version = "0.1.0"
     };
 })
-.WithHttpTransport(options =>
-{
-    // Configure session timeout (2 hours default is fine for demo)
-    options.IdleTimeout = TimeSpan.FromHours(2);
-})
+.WithHttpTransport()
 .WithTools<ErrorTools>()
 .WithTools<ServiceTools>()
 .WithTools<FlagTools>();
@@ -38,7 +34,7 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 // Map MCP endpoints (uses "/mcp" route)
-app.MapMcp("/mcp");
+app.MapMcp();
 
 // Add a health check endpoint
 app.MapGet("/health", () => Results.Ok(new 

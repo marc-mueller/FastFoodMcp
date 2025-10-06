@@ -99,7 +99,7 @@ You should see:
 
 ```
 Starting FastFood MCP Server (HTTP) at http://localhost:5000
-MCP endpoint: http://localhost:5000/mcp
+MCP endpoint: http://localhost:5000
 Health check: http://localhost:5000/health
 Press Ctrl+C to stop the server
 ```
@@ -401,7 +401,7 @@ Add to your `.vscode/mcp.json` in your workspace root:
 {
   "mcpServers": {
     "fastfoodhttp": {
-      "url": "http://localhost:5000/mcp",
+      "url": "http://localhost:5000",
       "type": "http"
     }
   }
@@ -447,11 +447,128 @@ Add to your `.vscode/mcp.json` in your workspace root:
 
 **Note:** Update the project path in the stdio configuration to match your local installation path.
 
-### Choosing a Transport
+## Optimizing AI Assistant Usage
 
-- **HTTP**: Best for remote servers, web deployments, or when you need RESTful access
-- **Stdio**: Best for local tools, CLI integration, or when running alongside the client process
-- **Docker**: Best for isolated environments, reproducible setups, or when distribution is important
+To get the most out of FastFood MCP with GitHub Copilot or other AI assistants, you can provide custom instructions that help the AI understand when and how to use the available tools.
+
+### Custom Instructions for GitHub Copilot
+
+Add these instructions to your Copilot "Team/Project instructions" or workspace settings:
+
+```markdown
+**Project tools:** `fastfood-mcp` (local MCP).
+**Primary goal:** Answer questions and generate changes **using fastfood-mcp tools** whenever they apply. Prefer tool calls over guessing.
+
+## When to call which tool
+
+* **Errors**
+  * `explain_error(code)` → any mention of an internal error code (e.g., E2145, P5001) or "what does this error mean?"
+  * `search_errors(query, limit)` → user gives a log line/keyword but not a code, or `explain_error` returns "not found."
+  * `suggest_fix(code)` → the user asks for concrete remediation steps or a runbook summary.
+
+* **Services (system awareness)**
+  * `get_service(name)` → user asks what a service does, repo, language, or its API list.
+  * `list_dependencies(name, direction)`
+    * `outbound` → "what does X depend on?"
+    * `inbound` → "who depends on X?"
+  * `find_endpoint(name, [path])` → user asks about available routes or filters by a path fragment.
+  * `service_owner(name)` → user asks for owners, Slack channel, or runbook.
+
+* **Feature flags**
+  * `list_flags([service])` → enumerate flags (optionally scoped to a service).
+  * `get_flag(key)` → full definition and environments.
+  * `flag_status(key, environment)` → resolve the *effective* value in `dev | staging | prod`.
+
+## Execution rules
+
+1. **Prefer tools** over assumptions for anything about errors, services/dependencies, feature flags.
+2. If a lookup fails, **immediately try the fuzzy/backup tool** (e.g., `search_errors` after a miss; or suggest top 3 close service names from the response).
+3. **Surface links** (runbooks) from tool responses when proposing steps.
+4. When writing code/tests that depend on a **feature flag**, call `flag_status` first and generate **parameterized tests** or branches for true/false (or multivariants).
+5. When planning a change, call `list_dependencies` (both directions if risk is discussed) and name owners via `service_owner` for review routing.
+6. Keep answers **actionable**: summarize tool result → concrete next steps → (optionally) code or commands.
+```
+
+### Sample Prompts
+
+Here are example prompts that demonstrate how to effectively use the MCP tools:
+
+#### A. Incidents & Troubleshooting (Errors)
+
+1. **Decode an error code (quick triage)**
+   > I'm seeing **E2145** from the gateway. What does it mean and what are the first three actions I should take?
+
+2. **No code, only a log snippet**
+   > Search the error catalog for "ExpiredJwtException" and show me the matching codes with severity.
+
+3. **Remediation checklist**
+   > Give me the fix checklist for **P5001** and paste the steps into a markdown TODO list for my incident notes.
+
+4. **If not found → fuzzy assist**
+   > Explain error **E214**. If not found, suggest the closest codes and show their titles.
+
+#### B. Architecture & Ownership (Services)
+
+5. **What is this service?**
+   > What does **order-service** do? Show its owners, repo, language, and top endpoints.
+
+6. **Outbound dependencies (blast radius)**
+   > List the **outbound** dependencies of **order-service** and briefly explain why each matters.
+
+7. **Inbound dependencies (who will I break?)**
+   > Which services **depend on** **finance-service**? I'm planning a breaking API change.
+
+8. **Find endpoints**
+   > Show the endpoints on **reverse-proxy** that contain "/api/orders".
+
+9. **Who owns this?**
+   > Who owns **kitchen-service** and what's the Slack channel and runbook?
+
+10. **Change routing plan**
+    > I want POS to hit order APIs through the proxy. Confirm the proxy routes for orders and payments.
+
+#### C. Feature-Flag Aware Coding & Testing (Flags)
+
+11. **List relevant flags**
+    > List feature flags for the **webapp** service and tell me which are on in **staging**.
+
+12. **Understand a specific flag**
+    > What's the full definition of **checkout.newAddressForm**?
+
+13. **Environment-aware behavior**
+    > Is **checkout.newAddressForm** enabled in **prod**? If it's off, suggest a guard I can put around the new UI component.
+
+14. **Multivariate testing**
+    > Generate parameterized tests for **pricing.experimentA** across all variants using our test framework. First confirm the *prod* value.
+
+#### D. Combined Flows (Showing the Power)
+
+15. **From error → owners → endpoints**
+    > We're getting **P5001** during checkout. Explain it, list owners for **paymentsvc** (finance-service), and show me the proxy endpoints the checkout uses.
+
+16. **Pre-change impact analysis**
+    > I need to rename `/tickets` in **kitchen-service**. Who will this impact and where do I update routes?
+
+17. **Feature rollout safety check**
+    > We want to enable **checkout.newAddressForm** in **prod**. Show current values per environment and list any services that might be affected.
+
+18. **Debugging a 401 flow**
+    > Customers report 401 after 30 minutes. Search the error catalog for token/expired issues and give me likely causes and fixes.
+
+19. **New engineer orientation**
+    > Give me a quick architecture brief: describe **reverse-proxy**, the three frontends, and the three backends, and how they communicate.
+
+20. **PR prep helper**
+    > I'm touching **order-service**. List its outbound dependencies and the owners I should ping for review. Then generate a PR checklist.
+
+### Quick Prompt Patterns
+
+Use these drop-in lines to guide the AI assistant:
+
+* "**Use the MCP error tools** to explain code **E2145** and cite the runbook."
+* "Before proposing code, **resolve flag status** for `checkout.newAddressForm` in **prod**."
+* "**Confirm endpoints** via `find_endpoint` and don't assume paths."
+* "If a service lookup fails, **suggest close matches** and ask me which one I meant."
 
 ## Data Files
 
