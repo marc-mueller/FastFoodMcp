@@ -1,0 +1,141 @@
+{
+  "services": {
+    "reverse-proxy": {
+      "description": "Edge reverse proxy / API gateway routing frontends to backend services",
+      "owners": ["@platform-infra"],
+      "repo": "github.com/fastfood/edge-proxy",
+      "language": "csharp",
+      "dependsOn": ["order-service", "finance-service", "kitchen-service"],
+      "api": [
+        { "method": "POST", "path": "/api/orders" },
+        { "method": "GET",  "path": "/api/orders/{id}" },
+        { "method": "GET",  "path": "/api/orders/{id}/status" },
+        { "method": "POST", "path": "/api/payments" },
+        { "method": "GET",  "path": "/api/payments/{id}" },
+        { "method": "GET",  "path": "/api/kitchen/tickets" },
+        { "method": "PATCH","path": "/api/kitchen/tickets/{id}/status" }
+      ]
+    },
+
+    "frontend-pos": {
+      "description": "Frontend Point of Sales (POS) application used by staff to take orders",
+      "owners": ["@frontend-pos"],
+      "repo": "github.com/fastfood/frontend-pos",
+      "language": "typescript",
+      "dependsOn": ["reverse-proxy"],
+      "api": []
+    },
+
+    "frontend-order-status": {
+      "description": "Frontend to display live order status to customers",
+      "owners": ["@frontend-status"],
+      "repo": "github.com/fastfood/frontend-order-status",
+      "language": "typescript",
+      "dependsOn": ["reverse-proxy"],
+      "api": []
+    },
+
+    "frontend-kitchen-monitor": {
+      "description": "Frontend for kitchen staff to view and update ticket queue",
+      "owners": ["@frontend-kitchen"],
+      "repo": "github.com/fastfood/frontend-kitchen-monitor",
+      "language": "typescript",
+      "dependsOn": ["reverse-proxy"],
+      "api": []
+    },
+
+    "order-service": {
+      "description": "Order Service (Dapr sidecar) — creates orders, tracks lifecycle, publishes events",
+      "owners": ["@order-team"],
+      "repo": "github.com/fastfood/order-service",
+      "language": "csharp",
+      "dependsOn": ["pubsub.rabbitmq", "state.redis", "finance-service"],
+      "api": [
+        { "method": "POST", "path": "/orders" },
+        { "method": "GET",  "path": "/orders/{id}" },
+        { "method": "GET",  "path": "/orders/{id}/status" }
+      ]
+    },
+
+    "finance-service": {
+      "description": "Finance Service (Dapr sidecar) — payment authorization/settlement",
+      "owners": ["@finance-team"],
+      "repo": "github.com/fastfood/finance-service",
+      "language": "csharp",
+      "dependsOn": ["pubsub.rabbitmq", "state.redis"],
+      "api": [
+        { "method": "POST", "path": "/payments" },
+        { "method": "GET",  "path": "/payments/{id}" }
+      ]
+    },
+
+    "kitchen-service": {
+      "description": "Kitchen Service (Dapr sidecar) — ticket queue and preparation status",
+      "owners": ["@kitchen-team"],
+      "repo": "github.com/fastfood/kitchen-service",
+      "language": "csharp",
+      "dependsOn": ["pubsub.rabbitmq", "state.redis"],
+      "api": [
+        { "method": "GET",   "path": "/tickets" },
+        { "method": "POST",  "path": "/tickets" },
+        { "method": "PATCH", "path": "/tickets/{id}/status" }
+      ]
+    },
+
+    "pubsub.rabbitmq": {
+      "description": "Pub/Sub broker (RabbitMQ) used by Dapr bindings for domain events",
+      "owners": ["@platform-infra"],
+      "repo": "github.com/fastfood/infra-pubsub",
+      "language": "",
+      "dependsOn": [],
+      "api": []
+    },
+
+    "state.redis": {
+      "description": "State store (Redis) used for order/ticket state via Dapr state APIs",
+      "owners": ["@platform-infra"],
+      "repo": "github.com/fastfood/infra-state",
+      "language": "",
+      "dependsOn": [],
+      "api": []
+    }
+  },
+
+  "owners": {
+    "@platform-infra": {
+      "team": "@platform-infra",
+      "slack": "#platform",
+      "runbook": "https://docs.fastfood.local/runbooks/platform"
+    },
+    "@frontend-pos": {
+      "team": "@frontend-pos",
+      "slack": "#frontend-pos",
+      "runbook": "https://docs.fastfood.local/runbooks/frontend-pos"
+    },
+    "@frontend-status": {
+      "team": "@frontend-status",
+      "slack": "#frontend-status",
+      "runbook": "https://docs.fastfood.local/runbooks/frontend-status"
+    },
+    "@frontend-kitchen": {
+      "team": "@frontend-kitchen",
+      "slack": "#frontend-kitchen",
+      "runbook": "https://docs.fastfood.local/runbooks/frontend-kitchen"
+    },
+    "@order-team": {
+      "team": "@order-team",
+      "slack": "#order-service",
+      "runbook": "https://docs.fastfood.local/runbooks/order-service"
+    },
+    "@finance-team": {
+      "team": "@finance-team",
+      "slack": "#finance-service",
+      "runbook": "https://docs.fastfood.local/runbooks/finance-service"
+    },
+    "@kitchen-team": {
+      "team": "@kitchen-team",
+      "slack": "#kitchen-service",
+      "runbook": "https://docs.fastfood.local/runbooks/kitchen-service"
+    }
+  }
+}
