@@ -26,5 +26,31 @@
       "Verify circuit breaker thresholds"
     ],
     "links": []
+  },
+  "R7002": {
+    "title": "Dapr: Redis service name mismatch",
+    "services": ["kitchenservice", "orderservice", "paymentservice", "inventoryservice", "gateway"],
+    "severity": "high",
+    "messagePatterns": [
+      "Failed to init component .*\\(pubsub\\.redis\\/v1\\)",
+      "redis streams: error connecting to redis at .*:6379",
+      "lookup .* on .*: no such host",
+      "process component pubsub error"
+    ],
+    "causes": [
+      "Redis Helm chart changed service names; Dapr Components still point to old DNS",
+      "Dapr Component metadata 'redisHost' is set to an incorrect FQDN"
+    ],
+    "fix": [
+      "Discover the correct Redis Service endpoint: expected 'redis-ha-haproxy.redis:6379'. (Verify with: kubectl -n redis get svc redis-ha-haproxy -o jsonpath='{.metadata.name}.{.metadata.namespace}:{.spec.ports[0].port}\\n')",
+      "List Dapr Components in the affected namespace: kubectl -n <ns> get components.dapr.io -o name",
+      "For each Redis-backed Component (types 'pubsub.redis' or 'state.redis'), update metadata[name=redisHost].value to 'redis-ha-haproxy.redis:6379'. Example: kubectl -n <ns> get component <name> -o json | jq --arg host 'redis-ha-haproxy.redis:6379' '(.spec.metadata[] | select(.name==\"redisHost\") | .value) |= $host' | kubectl apply -f -",
+      "Restart workloads so daprd reloads Component config: kubectl -n <ns> rollout restart deploy && kubectl -n <ns> get deploy -o name | xargs -r -n1 kubectl -n <ns> rollout status --timeout=180s",
+      "Verify recovery: kubectl -n <ns> get pods; then check daprd logs (no more DNS/connection errors): kubectl -n <ns> logs <pod> -c daprd --tail=80"
+    ],
+    "links": [
+      { "label": "Dapr Redis pubsub component", "url": "https://docs.dapr.io/reference/components-reference/supported-pubsub/setup-redis/" },
+      { "label": "Dapr Redis state store", "url": "https://docs.dapr.io/reference/components-reference/supported-state-stores/setup-redis/" }
+    ]
   }
 }
