@@ -1,0 +1,63 @@
+name: Publish FastFoodMcp Stdio Container
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/FastFoodMcpStdio/**'
+      - '.github/workflows/publish-stdio-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build and Push to GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish container image (stdio)
+        run: >-
+          dotnet publish src/FastFoodMcpStdio/FastFoodMcpStdio.csproj
+          -c Release
+          -t:PublishContainer
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=marc-mueller/fastfoodmcp
+          -p:ContainerImageTags=latest
+
+      # Optional: Make the package public via the GitHub API. If it doesn't
+      # have permission in your account settings, this step will be skipped.
+      - name: Ensure package visibility is public
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_NAME: fastfoodmcp
+        run: |
+          set -euo pipefail
+          # Wait a moment to let the package appear in the registry
+          sleep 5
+          curl -s -o /dev/null -w "%{http_code}\n" \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/user/packages/container/${PACKAGE_NAME}/visibility \
+            -d '{"visibility":"public"}' || true
