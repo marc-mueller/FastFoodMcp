@@ -28,14 +28,20 @@
     "links": []
   },
   "R7002": {
-    "title": "Dapr: Redis service name mismatch",
+    "title": "Dapr Redis connection failed: service name mismatch",
     "services": ["kitchenservice", "orderservice", "paymentservice", "inventoryservice", "gateway"],
     "severity": "high",
     "messagePatterns": [
       "Failed to init component .*\\(pubsub\\.redis\\/v1\\)",
       "redis streams: error connecting to redis at .*:6379",
       "lookup .* on .*: no such host",
-      "process component pubsub error"
+      "process component pubsub error",
+      "redis connection",
+      "redis connection failed",
+      "dapr redis",
+      "init component failure",
+      "component initialization",
+      "INIT_COMPONENT_FAILURE redis"
     ],
     "causes": [
       "Redis Helm chart changed service names; Dapr Components still point to old DNS",
