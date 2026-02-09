@@ -22,11 +22,11 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
     public async Task McpEndpoint_GET_ReturnsExpectedResponse()
     {
         // Act
-        var response = await _client.GetAsync("/mcp");
+        var response = await _client.GetAsync("/mcp", TestContext.Current.CancellationToken);
 
         // Assert - Document what we get
         Console.WriteLine($"GET /mcp Status: {response.StatusCode}");
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Console.WriteLine($"GET /mcp Content: {content}");
         
         // The endpoint should exist (not 404)
@@ -669,6 +669,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
 
     private async Task<HttpResponseMessage> PostMcpRequest(object request)
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var json = JsonSerializer.Serialize(request);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
@@ -680,12 +681,12 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
         requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/event-stream"));
         
-        return await _client.SendAsync(requestMessage);
+        return await _client.SendAsync(requestMessage, cancellationToken);
     }
 
     private async Task<JsonElement> ParseSseResponse(HttpResponseMessage response)
     {
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         
         // Parse SSE format: "event: message\ndata: {json}\n\n"
         var lines = content.Split('\n');

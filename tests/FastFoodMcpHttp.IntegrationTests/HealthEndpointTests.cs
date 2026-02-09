@@ -17,12 +17,12 @@ public class HealthEndpointTests : IClassFixture<FastFoodMcpFactory>
     public async Task HealthEndpoint_ReturnsHealthyStatus()
     {
         // Act
-        var response = await _client.GetAsync("/health");
+        var response = await _client.GetAsync("/health", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var healthData = JsonSerializer.Deserialize<JsonElement>(content);
         
         healthData.GetProperty("status").GetString().Should().Be("healthy");

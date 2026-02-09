@@ -6,7 +6,7 @@ A compact, company-aware MCP server for developers.
 
 ## Overview
 
-FastFood MCP is a demonstration Model Context Protocol (MCP) server written in C# (.NET 9) using the official MCP SDK. It showcases **both HTTP and stdio transport implementations** to demonstrate different deployment options. The server provides AI assistants with structured access to:
+FastFood MCP is a demonstration Model Context Protocol (MCP) server written in C# (.NET 10) using the official MCP SDK. It showcases **both HTTP and stdio transport implementations** to demonstrate different deployment options. The server provides AI assistants with structured access to:
 
 - **Error Troubleshooting**: Explain error codes, search errors, and get fix suggestions
 - **Service Dependencies**: Query service metadata, dependencies, endpoints, and owners
@@ -21,7 +21,8 @@ This server serves as a **tutorial and training implementation** showing how to 
 ✅ **Shared Core Library** - Reusable tools and infrastructure  
 ✅ **Hot-Reload** - JSON data files reload automatically on changes  
 ✅ **Fuzzy Matching** - Helpful suggestions when lookups fail  
-✅ **.NET 9** - Modern, high-performance framework  
+✅ **.NET 10** - Modern, high-performance framework  
+✅ **Optional API Key Auth (HTTP)** - Demonstrates simple authentication for demos
 ✅ **Deterministic** - Predictable, sorted outputs  
 ✅ **Production-Ready Patterns** - Logging, error handling, DI  
 ✅ **Docker Support** - Containerized stdio server option
@@ -72,7 +73,7 @@ FastFoodMcp/
 
 ## Prerequisites
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Any OS (Windows, macOS, Linux)
 
 ## Quick Start
@@ -98,11 +99,13 @@ The server will start on `http://localhost:5000` by default.
 You should see:
 
 ```
-Starting FastFood MCP Server (HTTP) at http://localhost:5000
-MCP endpoint: http://localhost:5000
+Starting FastFood MCP Server at http://localhost:5000
+MCP endpoint: http://localhost:5000/mcp
 Health check: http://localhost:5000/health
 Press Ctrl+C to stop the server
 ```
+
+Note: With the current MCP SDK, the HTTP endpoint is explicitly mapped to `/mcp` via `app.MapMcp("/mcp")`.
 
 #### 3. Test the health endpoint
 
@@ -114,6 +117,32 @@ Expected response:
 ```json
 {"status":"healthy","server":"fastfood-mcp","version":"0.1.0","timestamp":"2025-10-03T08:09:09.027218Z"}
 ```
+
+### Optional API Key Authentication (HTTP)
+
+The HTTP server supports optional API key authentication for demo purposes. It is **disabled by default**.
+
+Enable it in appsettings (or via environment variables):
+
+```json
+"FastFoodMcp": {
+  "Auth": {
+    "ApiKey": {
+      "Enabled": true,
+      "Key": "your-demo-key",
+      "HeaderName": "X-API-Key"
+    }
+  }
+}
+```
+
+Then call the MCP endpoint with the header:
+
+```bash
+curl -H "X-API-Key: your-demo-key" http://localhost:5000/mcp
+```
+
+OIDC is not implemented for this demo, but the HTTP host has a comment indicating where a real authentication setup would go.
 
 ### Option 2: Stdio Transport Server
 
@@ -401,10 +430,56 @@ Add to your `.vscode/mcp.json` in your workspace root:
 {
   "mcpServers": {
     "fastfoodhttp": {
-      "url": "http://localhost:5000",
+      "url": "http://localhost:5000/mcp",
       "type": "http"
     }
   }
+}
+```
+
+#### HTTP Transport (with API key)
+
+```json
+{
+  "mcpServers": {
+    "fastfoodhttp": {
+      "url": "http://localhost:5000/mcp",
+      "type": "http",
+      "headers": {
+        "X-API-Key": "${env:FASTFOOD_MCP_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Set the API key in your environment so it is not stored in plaintext:
+
+```bash
+export FASTFOOD_MCP_API_KEY="your-demo-key"
+```
+
+#### HTTP Transport (with API key via VS Code inputs)
+
+```jsonc
+{
+  "servers": {
+    "fastfoodhttp": {
+      "url": "http://localhost:5000/mcp",
+      "type": "http",
+      "headers": {
+        "X-API-Key": "${input:fastfood_mcp_api_key}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "fastfood_mcp_api_key",
+      "type": "promptString",
+      "description": "FastFood MCP API key",
+      "password": true
+    }
+  ]
 }
 ```
 
@@ -814,7 +889,7 @@ MIT License - See [LICENSE](LICENSE) file
 - [MCP Specification](https://modelcontextprotocol.io)
 - [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
 - [ASP.NET Core Documentation](https://learn.microsoft.com/aspnet/core)
-- [.NET 9 Documentation](https://learn.microsoft.com/dotnet)
+- [.NET 10 Documentation](https://learn.microsoft.com/dotnet)
 
 ## Contributing
 
