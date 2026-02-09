@@ -121,8 +121,9 @@ public class ServiceTools
         }
         else
         {
-            throw new McpException($"Invalid direction '{direction}'. Must be 'inbound' or 'outbound'."
-            , McpErrorCode.InvalidParams);
+            throw new McpProtocolException(
+                $"Invalid direction '{direction}'. Must be 'inbound' or 'outbound'.",
+                McpErrorCode.InvalidParams);
         }
     }
 

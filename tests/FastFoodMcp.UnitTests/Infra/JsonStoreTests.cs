@@ -78,7 +78,7 @@ public class JsonStoreTests : IDisposable
         File.WriteAllText(_tempFilePath, JsonSerializer.Serialize(updatedData));
         
         // Wait for file watcher to trigger (with timeout)
-        await Task.Delay(1500);
+        await Task.Delay(1500, TestContext.Current.CancellationToken);
 
         // Assert
         store.Data.Name.Should().Be("Updated");
