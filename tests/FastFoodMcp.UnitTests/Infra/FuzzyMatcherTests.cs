@@ -47,7 +47,7 @@ public class FuzzyMatcherTests
 
         // Assert
         // "application" has lower similarity score and may be filtered out by minScore threshold
-        matches.Should().HaveCountGreaterOrEqualTo(2);
+        matches.Should().HaveCountGreaterThanOrEqualTo(2);
         // Matches are returned with score, so check the Item property
         var matchedStrings = matches.Select(m => m.Item).ToList();
         matchedStrings.Should().Contain("apple");

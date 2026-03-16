@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using FastFoodMcp.Infra;
 using FastFoodMcpBase.Models;
 using Microsoft.Extensions.Logging;
@@ -84,7 +85,7 @@ public class FlagTools
                 Key = key,
                 Service = null,
                 Type = "boolean",
-                Default = false,
+                Default = CreateFlagValue(false),
                 Variants = null,
                 Owners = new List<string>(),
                 Description = $"Feature flag '{key}' not found.{suggestionText}",
@@ -97,7 +98,7 @@ public class FlagTools
             Key = flag.Key,
             Service = flag.Service,
             Type = flag.Type,
-            Default = flag.Default,
+            Default = CreateFlagValue(flag.Default),
             Variants = flag.Variants,
             Owners = flag.Owners,
             Description = flag.Description,
@@ -139,7 +140,7 @@ public class FlagTools
             {
                 Key = key,
                 Environment = environment,
-                Value = $"Feature flag '{key}' not found.{suggestionText}"
+                Value = CreateFlagValue($"Feature flag '{key}' not found.{suggestionText}")
             };
         }
 
@@ -175,7 +176,36 @@ public class FlagTools
         {
             Key = flag.Key,
             Environment = environment,
-            Value = value
+            Value = CreateFlagValue(value)
+        };
+    }
+
+    private static FlagValue CreateFlagValue(object? value)
+    {
+        return value switch
+        {
+            bool booleanValue => new FlagValue
+            {
+                Kind = "boolean",
+                BooleanValue = booleanValue,
+                Json = JsonSerializer.Serialize(booleanValue)
+            },
+            string stringValue => new FlagValue
+            {
+                Kind = "string",
+                StringValue = stringValue,
+                Json = JsonSerializer.Serialize(stringValue)
+            },
+            null => new FlagValue
+            {
+                Kind = "null",
+                Json = "null"
+            },
+            _ => new FlagValue
+            {
+                Kind = "json",
+                Json = JsonSerializer.Serialize(value)
+            }
         };
     }
 }

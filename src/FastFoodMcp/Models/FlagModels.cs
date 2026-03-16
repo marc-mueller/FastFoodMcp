@@ -89,7 +89,7 @@ public class GetFlagResponse
     public required string Type { get; set; }
 
     [JsonPropertyName("default")]
-    public object? Default { get; set; }
+    public FlagValue? Default { get; set; }
 
     [JsonPropertyName("variants")]
     public List<object>? Variants { get; set; }
@@ -128,5 +128,23 @@ public class FlagStatusResponse
     public required string Environment { get; set; }
 
     [JsonPropertyName("value")]
-    public object? Value { get; set; }
+    public FlagValue? Value { get; set; }
+}
+
+/// <summary>
+/// Explicit representation of a flag value for MCP schema generation.
+/// </summary>
+public class FlagValue
+{
+    [JsonPropertyName("kind")]
+    public required string Kind { get; set; }
+
+    [JsonPropertyName("booleanValue")]
+    public bool? BooleanValue { get; set; }
+
+    [JsonPropertyName("stringValue")]
+    public string? StringValue { get; set; }
+
+    [JsonPropertyName("json")]
+    public required string Json { get; set; }
 }

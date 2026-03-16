@@ -27,7 +27,7 @@ public class McpApiKeyAuthTests : IClassFixture<FastFoodMcpAuthFactory>
             method = "initialize",
             @params = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion = "2025-03-26",
                 capabilities = new { },
                 clientInfo = new
                 {
@@ -52,7 +52,7 @@ public class McpApiKeyAuthTests : IClassFixture<FastFoodMcpAuthFactory>
             method = "initialize",
             @params = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion = "2025-03-26",
                 capabilities = new { },
                 clientInfo = new
                 {
