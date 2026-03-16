@@ -1,11 +1,8 @@
 using FastFoodMcp.Extensions;
-using FastFoodMcp.Infra;
-using FastFoodMcp.Models;
 using FastFoodMcp.Tools;
-using FastFoodMcpBase.Models;
 using FastFoodMcpHttp.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,16 +19,14 @@ builder.Services.Configure<ApiKeyOptions>(
 // Configure MCP Server with HTTP transport
 builder.Services.AddMcpServer(options =>
 {
-    options.ServerInfo = new ModelContextProtocol.Protocol.Implementation
+    options.ServerInfo = new Implementation
     {
         Name = "fastfood-mcp",
         Version = "0.1.0"
     };
 })
 .WithHttpTransport()
-.WithTools<ErrorTools>()
-.WithTools<ServiceTools>()
-.WithTools<FlagTools>();
+.WithToolsFromAssembly(typeof(ErrorTools).Assembly);
 
 var app = builder.Build();
 var apiKeyOptionsAccessor = app.Services.GetRequiredService<IOptionsMonitor<ApiKeyOptions>>();

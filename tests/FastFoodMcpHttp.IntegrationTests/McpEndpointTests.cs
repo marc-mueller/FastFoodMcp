@@ -9,6 +9,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
 {
     private readonly HttpClient _client;
     private readonly FastFoodMcpFactory _factory;
+    private string? _sessionId;
 
     public McpEndpointTests(FastFoodMcpFactory factory)
     {
@@ -45,7 +46,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
             method = "initialize",
             @params = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion = "2025-03-26",
                 capabilities = new { },
                 clientInfo = new
                 {
@@ -654,7 +655,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
             method = "initialize",
             @params = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion = "2025-03-26",
                 capabilities = new { },
                 clientInfo = new
                 {
@@ -664,7 +665,21 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
             }
         };
 
-        await PostMcpRequest(initRequest);
+        var response = await PostMcpRequest(initRequest);
+
+        // Capture the session ID from the response for subsequent requests
+        if (response.Headers.TryGetValues("Mcp-Session-Id", out var sessionValues))
+        {
+            _sessionId = sessionValues.FirstOrDefault();
+        }
+
+        // Send initialized notification
+        var initializedNotification = new
+        {
+            jsonrpc = "2.0",
+            method = "notifications/initialized"
+        };
+        await PostMcpRequest(initializedNotification);
     }
 
     private async Task<HttpResponseMessage> PostMcpRequest(object request)
@@ -673,7 +688,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
         var json = JsonSerializer.Serialize(request);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
-        // MCP HTTP transport requires both Accept headers
+        // MCP Streamable HTTP transport
         var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
             Content = content
@@ -681,12 +696,33 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
         requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/event-stream"));
         
-        return await _client.SendAsync(requestMessage, cancellationToken);
+        // Include session ID for subsequent requests after initialization
+        if (_sessionId != null)
+        {
+            requestMessage.Headers.Add("Mcp-Session-Id", _sessionId);
+        }
+        
+        var response = await _client.SendAsync(requestMessage, cancellationToken);
+
+        // Capture or update session ID from response
+        if (response.Headers.TryGetValues("Mcp-Session-Id", out var sessionValues))
+        {
+            _sessionId = sessionValues.FirstOrDefault();
+        }
+
+        return response;
     }
 
-    private async Task<JsonElement> ParseSseResponse(HttpResponseMessage response)
+    private static async Task<JsonElement> ParseSseResponse(HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        
+        // Try JSON first (MCP 1.1.0 Streamable HTTP may return JSON directly)
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        if (contentType == "application/json")
+        {
+            return JsonSerializer.Deserialize<JsonElement>(content);
+        }
         
         // Parse SSE format: "event: message\ndata: {json}\n\n"
         var lines = content.Split('\n');
@@ -699,7 +735,7 @@ public class McpEndpointTests : IClassFixture<FastFoodMcpFactory>
             }
         }
         
-        throw new InvalidOperationException($"No data found in SSE response: {content}");
+        throw new InvalidOperationException($"No data found in response: {content}");
     }
 
     #endregion
