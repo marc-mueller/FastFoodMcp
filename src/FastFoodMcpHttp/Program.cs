@@ -1,6 +1,7 @@
 using FastFoodMcp.Extensions;
 using FastFoodMcp.Tools;
 using FastFoodMcpHttp.Options;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 
@@ -15,6 +16,19 @@ builder.Logging.AddDebug();
 builder.Services.AddJsonStores();
 builder.Services.Configure<ApiKeyOptions>(
     builder.Configuration.GetSection("FastFoodMcp:Auth:ApiKey"));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Inspector", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:6274",
+                "http://127.0.0.1:6274")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .WithExposedHeaders("Mcp-Session-Id");
+    });
+});
 
 // Configure MCP Server with HTTP transport
 builder.Services.AddMcpServer(options =>
@@ -30,6 +44,7 @@ builder.Services.AddMcpServer(options =>
 
 var app = builder.Build();
 var apiKeyOptionsAccessor = app.Services.GetRequiredService<IOptionsMonitor<ApiKeyOptions>>();
+app.UseCors("Inspector");
 
 // Configure HTTP request pipeline
 if (!app.Environment.IsDevelopment())
@@ -43,6 +58,12 @@ app.UseWhen(
     {
         branch.Use(async (context, next) =>
         {
+            if (HttpMethods.IsOptions(context.Request.Method))
+            {
+                await next();
+                return;
+            }
+
             var apiKeyOptions = apiKeyOptionsAccessor.CurrentValue;
             if (!apiKeyOptions.Enabled)
             {
